@@ -1,0 +1,54 @@
+{
+  "name": "AI Lab — CRM lead enrich",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "crm-lead",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "wh1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AI_LAB_BASE_URL }}/api/automation/crm",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-practice-key",
+              "value": "={{ $env.PRACTICE_API_KEY }}"
+            },
+            {
+              "name": "Idempotency-Key",
+              "value": "={{ $json.body.email || $json.body.id || $now.toISO() }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"text\": \"{{ $json.body.text || $json.body }}\",\n  \"source\": \"n8n\"\n}",
+        "options": {}
+      },
+      "id": "http1",
+      "name": "Call AI Lab CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [260, 0]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Call AI Lab CRM", "type": "main", "index": 0 }]]
+    }
+  },
+  "meta": {
+    "templateNote": "Creates a local CRM row in data/store.json. Swap store for Supabase/HubSpot later."
+  }
+}

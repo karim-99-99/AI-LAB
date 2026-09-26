@@ -1,0 +1,54 @@
+{
+  "name": "AI Lab — Email automation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "email-automation",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "wh1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AI_LAB_BASE_URL }}/api/automation/email",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-practice-key",
+              "value": "={{ $env.PRACTICE_API_KEY }}"
+            },
+            {
+              "name": "Idempotency-Key",
+              "value": "={{ $json.body.id || $now.toISO() }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"to\": \"{{ $json.body.to }}\",\n  \"purpose\": \"{{ $json.body.purpose }}\",\n  \"context\": \"{{ $json.body.context }}\",\n  \"requireApproval\": true\n}",
+        "options": {}
+      },
+      "id": "http1",
+      "name": "Call AI Lab email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [260, 0]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Call AI Lab email", "type": "main", "index": 0 }]]
+    }
+  },
+  "meta": {
+    "templateNote": "Drafts land in /approve before local outbox."
+  }
+}

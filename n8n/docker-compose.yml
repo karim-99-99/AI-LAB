@@ -1,0 +1,54 @@
+# Local stack: n8n + Redis. n8n calls AI Lab over HTTP.
+#
+# Target app (AI_LAB_BASE_URL) — default is the LIVE Vercel deployment, so the
+# workflows work 24/7 without `npm run dev`:
+#   https://ai-lab-alpha-five.vercel.app
+# To hit your local dev server instead, override when starting:
+#   PowerShell: $env:AI_LAB_BASE_URL="http://host.docker.internal:3001"; docker compose -f n8n/docker-compose.yml up -d
+#   bash:       AI_LAB_BASE_URL=http://host.docker.internal:3001 docker compose -f n8n/docker-compose.yml up -d
+# (or put AI_LAB_BASE_URL=... in an `n8n/.env` file next to this compose file)
+#
+# Start:  docker compose -f n8n/docker-compose.yml up -d
+# Stop:   docker compose -f n8n/docker-compose.yml down
+# Redis:  redis://localhost:6379  → set REDIS_URL in .env.local
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: ai-lab-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    container_name: ai-lab-n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5678/
+      - N8N_SECURE_COOKIE=false
+      - GENERIC_TIMEZONE=Africa/Cairo
+      - TZ=Africa/Cairo
+      # Live app by default; override via shell env or n8n/.env (see header)
+      - AI_LAB_BASE_URL=${AI_LAB_BASE_URL:-https://ai-lab-alpha-five.vercel.app}
+      # Must match PRACTICE_API_KEY set on Vercel / in .env.local
+      - PRACTICE_API_KEY=${PRACTICE_API_KEY:-practice-dev-key}
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+    volumes:
+      - n8n_data:/home/node/.n8n
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - redis
+
+volumes:
+  n8n_data:
+  redis_data:

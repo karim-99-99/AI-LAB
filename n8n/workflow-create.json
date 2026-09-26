@@ -1,0 +1,63 @@
+{
+  "name": "AI Lab — Support ticket → approval",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "support-ticket",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "wh1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "support-ticket"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3000/api/automation/support",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-practice-key",
+              "value": "practice-dev-key"
+            },
+            {
+              "name": "Idempotency-Key",
+              "value": "={{ $json.body?.ticketId || $json.ticketId || $now.toISO() }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ customer: $json.body?.customer || $json.customer || 'unknown', ticket: $json.body?.ticket || $json.ticket || '' }) }}",
+        "options": {}
+      },
+      "id": "http1",
+      "name": "Call AI Lab support",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [280, 0]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Call AI Lab support",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

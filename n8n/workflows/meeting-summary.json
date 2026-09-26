@@ -1,0 +1,54 @@
+{
+  "name": "AI Lab — Meeting summarizer",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "meeting-summary",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "wh1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AI_LAB_BASE_URL }}/api/automation/meeting",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-practice-key",
+              "value": "={{ $env.PRACTICE_API_KEY }}"
+            },
+            {
+              "name": "Idempotency-Key",
+              "value": "={{ $json.body.meetingId || $now.toISO() }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"transcript\": \"{{ $json.body.transcript }}\",\n  \"notifyEmail\": \"{{ $json.body.notifyEmail }}\"\n}",
+        "options": {}
+      },
+      "id": "http1",
+      "name": "Call AI Lab meeting",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [260, 0]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Call AI Lab meeting", "type": "main", "index": 0 }]]
+    }
+  },
+  "meta": {
+    "templateNote": "Saves summary + tasks and optionally writes a local outbox email."
+  }
+}
