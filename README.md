@@ -19,7 +19,8 @@ Production-style AI automation studio built with **Next.js**, **TypeScript**, an
 | **n8n** | 4 webhook workflows (support, CRM lead, email, meeting summary) calling this API |
 | **Ops** | Auth + rate limit · model routing (fast/strong) · Redis cache · usage/cost log · prompt-injection guardrails |
 
-Full feature list: [`AI_LAB_PROJECT.md`](./AI_LAB_PROJECT.md)
+Full feature list: [`AI_LAB_PROJECT.md`](./AI_LAB_PROJECT.md)  
+Local research automation (Addendum A): [`automation/README.md`](./automation/README.md) · hardware: [`automation/PROJECT_HARDWARE.md`](./automation/PROJECT_HARDWARE.md)
 
 ---
 

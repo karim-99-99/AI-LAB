@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Addendum A — LaunchAgent
+  Install (macOS):
+    1. Edit ProgramArguments paths to your clone of this repo.
+    2. cp automation/launchd/com.ailab.research.automation.plist ~/Library/LaunchAgents/
+    3. launchctl load ~/Library/LaunchAgents/com.ailab.research.automation.plist
+
+  This agent wakes every minute and delegates schedule matching to run-due-tasks.sh
+  so new tasks in tasks.json need NO plist rebuild.
+-->
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>com.ailab.research.automation</string>
+
+    <key>ProgramArguments</key>
+    <array>
+      <string>/bin/bash</string>
+      <string>/Users/SHARED/REPLACE_WITH_REPO/automation/scripts/run-due-tasks.sh</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/SHARED/REPLACE_WITH_REPO/automation</string>
+
+    <key>StartInterval</key>
+    <integer>60</integer>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/SHARED/REPLACE_WITH_REPO/automation/logs/launchd.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/SHARED/REPLACE_WITH_REPO/automation/logs/launchd.err.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>PATH</key>
+      <string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin</string>
+      <key>AILAB_QUIET</key>
+      <string>1</string>
+    </dict>
+  </dict>
+</plist>

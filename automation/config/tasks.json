@@ -1,0 +1,90 @@
+{
+  "$schema": "./tasks.schema.json",
+  "version": "1.0.0",
+  "addendum": "A-V1-LC",
+  "timezone_default": "Asia/Riyadh",
+  "anythingllm": {
+    "base_url": "http://127.0.0.1:3001/api/v1",
+    "keychain_service": "ailab.anythingllm",
+    "keychain_account": "api-key"
+  },
+  "archive": {
+    "root": "archive",
+    "encryption": "openssl-aes-256-cbc",
+    "keychain_service": "ailab.research-archive",
+    "keychain_account": "passphrase"
+  },
+  "logging": {
+    "dir": "logs/execution",
+    "format": "jsonl"
+  },
+  "tasks": [
+    {
+      "id": "daily-global-market-brief",
+      "name": "Daily Global Market Brief",
+      "enabled": true,
+      "description": "Morning global markets overview for the research archive.",
+      "schedule": {
+        "cron_comment": "Daily at 08:00 local (Launchd StartCalendarInterval)",
+        "hour": 8,
+        "minute": 0,
+        "timezone": "Asia/Riyadh",
+        "days_of_week": [
+          "mon",
+          "tue",
+          "wed",
+          "thu",
+          "fri",
+          "sat",
+          "sun"
+        ]
+      },
+      "workspace": {
+        "slug": "global-markets",
+        "mode": "chat",
+        "local_only": false,
+        "model": "default"
+      },
+      "prompt_id": "daily-global-market-brief",
+      "output": {
+        "title_prefix": "Daily Global Market Brief",
+        "format": "markdown"
+      }
+    },
+    {
+      "id": "us-market-close",
+      "name": "U.S. Market Close",
+      "enabled": true,
+      "description": "Post-close U.S. equities brief after the New York cash session.",
+      "schedule": {
+        "cron_comment": "Weekdays 16:05 America/New_York (after cash close)",
+        "hour": 16,
+        "minute": 5,
+        "timezone": "America/New_York",
+        "days_of_week": [
+          "mon",
+          "tue",
+          "wed",
+          "thu",
+          "fri"
+        ]
+      },
+      "workspace": {
+        "slug": "us-equities",
+        "mode": "chat",
+        "local_only": false,
+        "model": "default"
+      },
+      "prompt_id": "us-market-close",
+      "output": {
+        "title_prefix": "U.S. Market Close",
+        "format": "markdown"
+      }
+    }
+  ],
+  "notes": [
+    "Add a future task by appending an object under tasks[] and a matching prompt file under prompts/.",
+    "Set workspace.local_only=true for workspaces that must never egress; the runner enforces a local-only guard.",
+    "API keys are never stored here \u2014 only Keychain service/account names."
+  ]
+}
