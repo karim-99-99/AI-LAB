@@ -404,6 +404,21 @@ Never bake API keys into training data or into the local Modelfile.
 | Multi-step research + human approval | AI Lab **research agent** + **Approvals** |
 | Custom offline model trained on curated docs | This guide (`file.md`) Phase A + B |
 | Orchestrate OpenAI → Claude → Perplexity batch jobs | AI Lab **n8n** workflows or scripts |
+| Scheduled local research → encrypted archive | **Addendum A** (`automation/`) |
+
+---
+
+## Project hardware (automation host)
+
+| Device | Spec | Role |
+|--------|------|------|
+| MacBook Pro 16″ | M5 Max · 18-core CPU · 40-core GPU · 128GB · 8TB · Silver | Primary Launchd + AnythingLLM + archive host |
+| MacBook Pro 14″ | M5 Pro · 18-core CPU · 48GB · 2TB · Silver | Secondary |
+| iPhone 18 Pro | 512GB · Silver | Mobile review only |
+| iPad Pro 13″ | M5 · 512GB · Wi-Fi + Cellular · Silver | Mobile review only |
+
+Full inventory: [`automation/PROJECT_HARDWARE.md`](./automation/PROJECT_HARDWARE.md)  
+Addendum A spec + deliverables: [`automation/ADDENDUM_A.md`](./automation/ADDENDUM_A.md)
 
 ---
 

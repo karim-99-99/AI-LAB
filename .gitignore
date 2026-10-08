@@ -44,6 +44,18 @@ next-env.d.ts
 # local practice DB
 /data/
 
+# Addendum A — generated research archives & runtime logs
+/automation/archive/*/
+!/automation/archive/README.md
+!/automation/archive/inbox/
+/automation/archive/inbox/*
+!/automation/archive/inbox/.gitkeep
+/automation/logs/**/*.jsonl
+/automation/logs/launchd.*.log
+!/automation/logs/.gitkeep
+!/automation/logs/execution/.gitkeep
+
+
 # n8n local secrets / temp
 /n8n/cookies.txt
 /n8n/*-out.json

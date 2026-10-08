@@ -1,0 +1,18 @@
+{
+  "version": "1.0.0",
+  "description": "Central Prompt Library for Addendum A research automation. Add a new prompt file and register it here — no system rebuild.",
+  "prompts": [
+    {
+      "id": "daily-global-market-brief",
+      "file": "daily-global-market-brief.md",
+      "language": "en",
+      "tags": ["markets", "daily", "global"]
+    },
+    {
+      "id": "us-market-close",
+      "file": "us-market-close.md",
+      "language": "en",
+      "tags": ["markets", "us", "close"]
+    }
+  ]
+}
