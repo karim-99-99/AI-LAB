@@ -1,105 +1,167 @@
-# Local AI Model Pipeline — Docs, Multi-API Research, Verify, Train, Run Offline
+# Master Playbook — Local AI + Automation (What You Should Do)
 
-**Goal:** Build a knowledge corpus from your documents and trusted references, use cloud APIs (OpenAI → Claude → Perplexity) only during preparation, then train / adapt a model you can run **locally with no internet**, so every question is answered from **your** model and your data.
+**Classification:** PRIVATE / CONFIDENTIAL  
+**Version:** V1-LC  
+**Primary machine:** MacBook Pro 16″ (M5 Max · 128GB · 8TB)  
+**Principle:** Local-First / Secure / Modular / AI-Agnostic / Future-Ready
 
----
+This file is your **single checklist**. It merges:
 
-## What this guide covers
-
-1. Collect and clean your source documents  
-2. Use **OpenAI** to search and expand knowledge from those docs  
-3. Use **Claude** to revise, structure, and improve the training material  
-4. Use **Perplexity** to verify references and catch wrong or fake citations  
-5. Prepare a clean dataset for local training / fine-tuning  
-6. Train (or adapt) a model on your machine  
-7. Serve the model offline and answer questions from it only  
+1. Building a **private local model** from your docs (OpenAI → Claude → Perplexity → fine-tune → offline Q&A)  
+2. **Addendum A** — scheduled research automation on macOS (Launchd + AnythingLLM + Encrypted Archive)  
+3. Your **hardware inventory** (reviewed from `automation/PROJECT_HARDWARE.md` + `automation/ADDENDUM_A.md`)
 
 ---
 
-## Important reality check (read this first)
+## 0) What you are building (big picture)
 
-| Approach | What it is | Offline? | Best for |
-|----------|------------|----------|----------|
-| **RAG (retrieval)** | Your docs stay as files; a local model answers only from retrieved chunks | Yes (after models + docs are downloaded) | Fast, accurate citations, easy updates |
-| **Fine-tuning (LoRA / QLoRA)** | Teach a base model your style, domain language, and Q&A patterns | Yes | Domain tone, formats, specialized QA |
-| **Full training from scratch** | Train billions of parameters yourself | Practically no for most people | Research labs only — **not recommended** |
+You want two capabilities on the same Mac:
 
-**Recommended path for most people:**  
-**Prepare clean data with OpenAI + Claude + Perplexity → fine-tune a small open model with LoRA → optionally add local RAG** so answers stay grounded in your documents.
-
-This repo’s AI Lab already has a local RAG path (MiniLM embeddings + citations). Use that for “answer only from my docs.” Use this `file.md` pipeline when you also want a **custom local model** trained on curated material.
-
----
-
-## End-to-end architecture
+| Capability | What it does | When internet is needed |
+|------------|--------------|-------------------------|
+| **A. Local trained / adapted model** | Answers questions from **your** knowledge after you prepare data with cloud APIs | Only while preparing data & downloading the base model |
+| **B. Addendum A automation** | Runs research tasks on a schedule, saves encrypted reports | Only if the AnythingLLM workspace is allowed to use external tools; Local-Only workspaces stay offline |
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│  PHASE A — ONLINE (one-time / batch prep)                   │
-│                                                             │
-│  Your docs (PDF, MD, TXT, DOCX)                             │
-│           │                                                 │
-│           ▼                                                 │
-│  [1] OpenAI  — search / expand / draft Q&A from docs        │
-│           │                                                 │
-│           ▼                                                 │
-│  [2] Claude  — revise, structure, remove fluff, fix style   │
-│           │                                                 │
-│           ▼                                                 │
-│  [3] Perplexity — verify every reference & claim            │
-│           │                                                 │
-│           ▼                                                 │
-│  Clean dataset (JSONL) + verified references index          │
-└────────────────────────────┬────────────────────────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────────┐
-│  PHASE B — LOCAL / OFFLINE                                  │
-│                                                             │
-│  Download open base model once (Llama, Qwen, Mistral, …)    │
-│           │                                                 │
-│           ▼                                                 │
-│  Fine-tune with LoRA/QLoRA on your JSONL                    │
-│           │                                                 │
-│           ▼                                                 │
-│  Export GGUF / merge adapters → Ollama / llama.cpp / vLLM   │
-│           │                                                 │
-│           ▼                                                 │
-│  Ask questions → answers come from YOUR local model         │
-│  (optional: local RAG so answers cite your docs)            │
-└─────────────────────────────────────────────────────────────┘
+YOUR DOCS + REFERENCES
+        │
+        ▼
+┌─ PHASE 1 — ONLINE PREP ─────────────────────────────────┐
+│  OpenAI  = search / expand / draft Q&A                   │
+│  Claude  = revise / clean / structure dataset            │
+│  Perplexity = verify every reference is real & correct   │
+└───────────────────────────┬──────────────────────────────┘
+                            ▼
+                   Clean train.jsonl
+                            │
+                            ▼
+┌─ PHASE 2 — LOCAL TRAIN & SERVE (MacBook Pro 16″) ───────┐
+│  Fine-tune open model (LoRA) → Ollama / AnythingLLM      │
+│  Ask questions → answers from YOUR local model           │
+│  Optional RAG so answers cite your docs                  │
+└───────────────────────────┬──────────────────────────────┘
+                            ▼
+┌─ PHASE 3 — ADDENDUM A AUTOMATION ───────────────────────┐
+│  Launchd → tasks.json → AnythingLLM workspace            │
+│  → Encrypted Research Archive + Execution Logs           │
+└──────────────────────────────────────────────────────────┘
 ```
-
-Cloud APIs are used **only in Phase A**. After Phase B, you can unplug the network.
 
 ---
 
-## Phase A — Prepare high-quality training data with APIs
+## 1) Your hardware (reviewed) — where each device fits
 
-### A0. Folder layout
+Reviewed from `automation/PROJECT_HARDWARE.md`:
+
+| Device | Spec | What you should use it for |
+|--------|------|----------------------------|
+| **MacBook Pro 16″** | M5 Max · 18-core CPU · 40-core GPU · **128GB** · **8TB** · Silver | **Main host.** AnythingLLM, Launchd automation, fine-tuning, Encrypted Archive, models, logs |
+| **MacBook Pro 14″** | M5 Pro · 18-core CPU · 48GB · 2TB · Silver | Travel / secondary work. Clone repo if needed; do **not** duplicate live Keychain secrets carelessly |
+| **iPhone 18 Pro** | 512GB · Silver | **Review only.** No auto Email/Telegram sharing of research |
+| **iPad Pro 13″** | M5 · 512GB · Wi-Fi + Cellular · Silver | **Reading archived reports only.** No automated external sync |
+
+**Rule:** Automation + Local-Only workspaces run on the **16″**. Phones/tablets are viewers, not automation nodes.
+
+---
+
+## 2) Order of work (do this in sequence)
+
+Follow these stages in order. Do not skip security setup.
+
+| Stage | Name | Done when |
+|-------|------|-----------|
+| **1** | Install local stack on 16″ | AnythingLLM + Ollama (or equivalent) running on localhost |
+| **2** | Secure secrets (Keychain) | API keys & archive passphrase only in Keychain |
+| **3** | Collect & chunk your documents | `raw_docs/` + `extracted/` ready |
+| **4** | OpenAI search/draft | `openai_out/` Q&A drafts exist |
+| **5** | Claude revision | `claude_out/` clean rows exist |
+| **6** | Perplexity verify references | `references.json` only verified sources |
+| **7** | Build dataset | `train.jsonl` + `eval.jsonl` ready |
+| **8** | Fine-tune & export local model | Model answers offline from your domain |
+| **9** | Wire model into AnythingLLM workspaces | Chat works locally for your workspaces |
+| **10** | Enable Addendum A automation | Launchd runs daily + US-close tasks; reports encrypted |
+| **11** | Acceptance test | All checkboxes in §11 pass |
+
+---
+
+## 3) Stage 1 — Install local stack (MacBook Pro 16″)
+
+### Steps
+
+1. Install **AnythingLLM** desktop (or local server) and confirm API is on `http://127.0.0.1:3001` (or your chosen localhost port).  
+2. Install **Ollama** (or LM Studio / llama.cpp) for local models.  
+3. Create at least two workspaces that match `automation/config/tasks.json`:  
+   - `global-markets`  
+   - `us-equities`  
+4. Decide which workspaces are **Local-Only** (no external tools / no web). Mark them clearly; later set `"local_only": true` in `tasks.json` for those.  
+5. Clone this repo to a stable path, e.g. `~/Projects/AI-LAB`.
+
+### Folder layout you should create for training data
 
 ```text
-local-ai-lab/
-├── raw_docs/              # original PDFs, notes, manuals
-├── extracted/             # plain text / markdown from docs
-├── openai_out/            # search + draft Q&A from OpenAI
-├── claude_out/            # revised, structured training rows
-├── perplexity_out/        # verification reports
-├── dataset/
-│   ├── train.jsonl        # final training set
-│   ├── eval.jsonl         # held-out questions for testing
-│   └── references.json    # verified sources only
-├── scripts/               # your pipeline scripts
-└── models/                # local base + fine-tuned weights
+~/Projects/AI-LAB/
+├── file.md                          # this playbook
+├── automation/                      # Addendum A (already in repo)
+│   ├── config/tasks.json
+│   ├── prompts/
+│   ├── scripts/
+│   ├── launchd/
+│   ├── logs/execution/
+│   └── archive/
+└── local-ai-lab/                    # create this for the train pipeline
+    ├── raw_docs/
+    ├── extracted/
+    ├── openai_out/
+    ├── claude_out/
+    ├── perplexity_out/
+    ├── dataset/
+    │   ├── train.jsonl
+    │   ├── eval.jsonl
+    │   └── references.json
+    └── models/
 ```
 
-### A1. Extract text from your documents
+---
 
-- Prefer clean text: Markdown, TXT, or well-extracted PDF text.  
-- Split long files into chunks (e.g. 500–1500 tokens) with overlap.  
-- Keep metadata: `source_file`, `page`, `section_title`, `date`.  
+## 4) Stage 2 — Security first (mandatory)
 
-Example chunk record:
+Reviewed from `automation/ADDENDUM_A.md` security section.
+
+### What you must do
+
+1. **Never** put API keys in git, `tasks.json`, or screenshots.  
+2. Store secrets in **macOS Keychain** using the repo helper:
+
+```bash
+cd ~/Projects/AI-LAB
+
+# AnythingLLM API key
+./automation/scripts/keychain.sh set ailab.anythingllm api-key
+
+# Passphrase for Encrypted Research Archive
+./automation/scripts/keychain.sh set ailab.research-archive passphrase
+```
+
+3. For the **online prep** phase only (OpenAI / Claude / Perplexity), keep those keys in Keychain or a local untracked `.env` that is gitignored — never commit them.  
+4. Confirm: no Email / Telegram / external auto-share is configured for automation.
+
+| Secret | Keychain service | Account |
+|--------|------------------|---------|
+| AnythingLLM API key | `ailab.anythingllm` | `api-key` |
+| Archive passphrase | `ailab.research-archive` | `passphrase` |
+
+---
+
+## 5) Stage 3 — Collect documents
+
+### Steps
+
+1. Put all source PDFs / notes / manuals into `local-ai-lab/raw_docs/`.  
+2. Extract text to Markdown/TXT under `local-ai-lab/extracted/`.  
+3. Chunk long docs (about 500–1500 tokens) with overlap.  
+4. Keep metadata on every chunk: `source_file`, `page`, `section`, `date`.
+
+Example chunk:
 
 ```json
 {
@@ -111,330 +173,247 @@ Example chunk record:
 }
 ```
 
-### A2. OpenAI — search and draft knowledge
+---
 
-**Role of OpenAI in this pipeline:** expand coverage, draft candidate Q&A, and suggest related topics to research from your chunks.
+## 6) Stage 4 — OpenAI (search + draft Q&A)
 
-Typical jobs:
+**Job of OpenAI:** search/expand topics from your chunks and draft training Q&A.
 
-1. **Search / expand** — given a chunk, ask: “What related questions would a user ask? What terms should I look up next?”  
-2. **Draft Q&A pairs** — turn each chunk into `instruction` / `input` / `output` rows for training.  
-3. **Optional web-assisted search** — if you use OpenAI tools/browsing (or you provide search results yourself), collect candidate URLs and summaries **tagged as unverified** until Perplexity checks them.
+### Steps
 
-Example prompt pattern (conceptual):
+1. Set `OPENAI_API_KEY` (local only).  
+2. For each chunk, ask OpenAI to produce 3–5 grounded Q&A pairs.  
+3. Save JSON under `local-ai-lab/openai_out/`.  
+4. Tag any suggested web URLs as **unverified** until Stage 6.
+
+Prompt pattern:
 
 ```text
 You are a dataset builder.
-Given this document chunk and metadata, produce 3–5 Q&A pairs
-that a local assistant should answer ONLY from this material.
-For each pair include:
-- question
-- answer (grounded in the chunk)
-- citation_hint (source_file + page/section)
-- confidence (high|medium|low)
+Given this document chunk, produce 3–5 Q&A pairs
+a local assistant should answer ONLY from this material.
+Include: question, answer, citation_hint, confidence (high|medium|low).
 Do not invent facts not present in the chunk.
 ```
 
-Store raw OpenAI output under `openai_out/` as JSON, e.g.:
+---
 
-```json
-{
-  "chunk_id": "doc-01-p12-c03",
-  "pairs": [
-    {
-      "question": "How many paid leave days do employees get per year?",
-      "answer": "Up to 20 days of paid leave per year.",
-      "citation_hint": "company-handbook.pdf p.12 Leave policy",
-      "confidence": "high",
-      "suggested_references": []
-    }
-  ]
-}
-```
+## 7) Stage 5 — Claude (revision)
 
-**API keys (env):**
+**Job of Claude:** clean OpenAI drafts into consistent training rows.
 
-```bash
-OPENAI_API_KEY=sk-...
-# optional model choice
-OPENAI_MODEL=gpt-4.1-mini
-```
+### Steps
 
-### A3. Claude — revision and quality control
+1. Set `ANTHROPIC_API_KEY` (local only).  
+2. Send OpenAI drafts + original chunk to Claude.  
+3. Claude must: fix style, drop hallucinations, merge duplicates, keep citations, add “I don’t know” refusal examples.  
+4. Save clean rows under `local-ai-lab/claude_out/`.
 
-**Role of Claude:** edit OpenAI drafts into clean, consistent training data.
+---
 
-Claude should:
+## 8) Stage 6 — Perplexity (verify references)
 
-- Fix grammar and clarity  
-- Enforce a single answer style (short, cited, no fluff)  
-- Merge duplicates  
-- Reject pairs that invent facts not in the chunk  
-- Convert everything to your final JSONL schema  
-- Add refusal rows (“I don’t know from the provided documents”) for out-of-scope questions  
+**Job of Perplexity:** prove every external reference is real and matches the claim.
 
-Example revision prompt pattern:
+### Steps
 
-```text
-You are a senior editor for a private RAG/fine-tune dataset.
-Revise these Q&A pairs:
-1) Keep only facts supported by the source chunk.
-2) Make answers concise and consistent.
-3) Preserve citation_hint.
-4) Flag any hallucinated claim as DROP.
-Return JSON only.
-```
+1. Set `PERPLEXITY_API_KEY` (local only).  
+2. For each external URL/claim from Stages 4–5, verify with Perplexity.  
+3. Mark each as `verified` | `corrected` | `rejected`.  
+4. Write only safe sources to `local-ai-lab/dataset/references.json`.  
+5. Drop or rewrite any training row that depended on a rejected source.
 
-Save revised rows to `claude_out/`.
+**Hard rule:** nothing enters `train.jsonl` unless it is grounded in your local docs **or** every external reference is verified.
 
-**API keys (env):**
+---
 
-```bash
-ANTHROPIC_API_KEY=sk-ant-...
-ANTHROPIC_MODEL=claude-sonnet-4-5
-```
+## 9) Stage 7 — Build the training files
 
-### A4. Perplexity — verify references (critical)
+### Steps
 
-**Role of Perplexity:** fact-check URLs, titles, authors, dates, and claims so you never train on bad or fake references.
+1. Convert Claude-approved rows into chat JSONL.  
+2. Split ~80–90% → `train.jsonl`, ~10–20% → `eval.jsonl` (never train on eval).  
+3. Spot-check 20 random rows yourself.
 
-For every external reference Claude/OpenAI proposed:
-
-1. Ask Perplexity to confirm the source exists and matches the claim.  
-2. Mark each reference: `verified` | `corrected` | `rejected`.  
-3. Only `verified` / `corrected` entries go into `dataset/references.json`.  
-4. If a training answer depended on a rejected source, **drop or rewrite** that row before training.
-
-Example verification record:
-
-```json
-{
-  "claim": "ISO 27001 requires annual internal audits.",
-  "proposed_url": "https://example.com/iso27001",
-  "status": "corrected",
-  "verified_url": "https://www.iso.org/standard/27001",
-  "notes": "Original blog URL was inaccurate; official ISO page preferred.",
-  "safe_for_training": true
-}
-```
-
-**API keys (env):**
-
-```bash
-PERPLEXITY_API_KEY=pplx-...
-PERPLEXITY_MODEL=sonar-pro
-```
-
-**Rule:** No row enters `train.jsonl` unless:
-
-- It is grounded in your local docs, **or**  
-- Every external reference it uses is Perplexity-verified.
-
-### A5. Build the final training files
-
-**`dataset/train.jsonl`** (one JSON object per line), common chat format:
+`train.jsonl` line example:
 
 ```json
 {"messages":[{"role":"system","content":"You are a private local assistant. Answer only from the user's domain knowledge. If unsure, say you do not know."},{"role":"user","content":"How many paid leave days do employees get?"},{"role":"assistant","content":"Up to 20 days of paid leave per year. Source: company-handbook.pdf, p.12."}]}
 ```
 
-**`dataset/eval.jsonl`:** hold out ~10–20% of questions. Never train on these; use them to score the local model later.
-
-**`dataset/references.json`:** only verified sources.
-
 ---
 
-## Phase B — Train / adapt a model and run offline
+## 10) Stage 8 — Fine-tune on the 16″ and run offline
 
-### B1. Choose a base model (open weights)
+Your 128GB unified memory can run strong local models. Prefer **LoRA / QLoRA**, not training from scratch.
 
-Pick a size that fits your GPU/CPU:
+### Steps
 
-| Hardware | Suggested base models |
-|----------|------------------------|
-| CPU only / 8–16 GB RAM | TinyLlama, Phi-3-mini GGUF Q4, Qwen2.5-1.5B Q4 |
-| 8–12 GB VRAM | Qwen2.5-7B / Llama-3.1-8B / Mistral-7B (QLoRA) |
-| 24 GB+ VRAM | 13B–32B class with LoRA |
-
-Download the model **once** while online; keep weights under `models/`.
-
-### B2. Fine-tune with LoRA / QLoRA (recommended)
-
-Tools commonly used:
-
-- **Axolotl**, **Unsloth**, **LLaMA-Factory**, or **Hugging Face TRL + PEFT**
-
-Conceptually:
-
-```text
-base_model + LoRA adapters trained on train.jsonl
-        →
-merged model or adapter pack
-        →
-export to GGUF for Ollama / llama.cpp
-```
-
-Practical tips:
-
-- Start with **1–3 epochs**, low learning rate.  
-- Mix in some general chat examples so the model does not forget basic language.  
-- Include refusal examples so it does not invent company facts.  
-- After training, score on `eval.jsonl` (exact match / LLM-as-judge / human review).
-
-### B3. Serve locally with no internet
-
-Popular offline runtimes:
-
-| Runtime | Why use it |
-|---------|------------|
-| **Ollama** | Simple CLI + local HTTP API |
-| **llama.cpp** | Fast GGUF on CPU/GPU |
-| **LM Studio** | Desktop UI |
-| **vLLM / TGI** | Higher throughput on GPU servers |
-
-Example with Ollama after you create a Modelfile pointing at your GGUF:
+1. Download an open base model once (e.g. Qwen2.5-7B / Llama-3.1-8B or larger if you want).  
+2. Fine-tune with Unsloth, LLaMA-Factory, Axolotl, or HF TRL+PEFT on `train.jsonl` (1–3 epochs).  
+3. Export to **GGUF** (or merge adapters).  
+4. Load into **Ollama** (and/or AnythingLLM as the workspace model).  
+5. Turn Wi‑Fi off and ask eval questions — answers must still work.  
+6. (Recommended) Add **local RAG** over `extracted/` so factual answers stay cited.
 
 ```bash
 ollama create my-domain-assistant -f Modelfile
 ollama run my-domain-assistant
 ```
 
-Then disconnect the network. Questions should still work if:
-
-- Model weights are on disk  
-- Your docs / vector index (if using RAG) are on disk  
-- No tool calls require external APIs
-
-### B4. Optional: local RAG on top of your fine-tuned model
-
-Even after fine-tuning, **RAG is safer for factual answers**:
-
-1. Embed your `extracted/` docs with a local embedding model (e.g. MiniLM — already used in AI Lab).  
-2. On each question: retrieve Top-K chunks → send them as context to your local model.  
-3. Instruct the model: “Answer only from context; cite sources; otherwise say I don’t know.”
-
-This matches the AI Lab RAG behavior and keeps the offline model honest.
+| Approach | Use when |
+|----------|----------|
+| **RAG** | You need citations and easy doc updates |
+| **Fine-tune** | You need domain style / fixed Q&A patterns |
+| **Both** | Best accuracy for a private offline assistant |
+| **Train from scratch** | Do **not** — not practical for this project |
 
 ---
 
-## Suggested orchestration workflow (batch)
+## 11) Stage 9–10 — Addendum A automation (full steps)
 
-Run this as a scripted pipeline (Python, n8n, or your AI Lab automation):
+Reviewed from `automation/ADDENDUM_A.md` + `automation/README.md`.
 
-```text
-1. ingest_docs()           → extracted/
-2. openai_search_and_qa()  → openai_out/
-3. claude_revise()         → claude_out/
-4. perplexity_verify()     → perplexity_out/ + references.json
-5. build_jsonl()           → dataset/train.jsonl + eval.jsonl
-6. (human spot-check)      → approve dataset
-7. finetune_lora()         → models/adapters/
-8. export_gguf()           → models/gguf/
-9. serve_ollama()          → local chat / API
-10. eval_offline()         → score against eval.jsonl
-```
+### 11.1 Goal
 
-You can wire steps 2–4 with n8n webhooks while online, then run 7–10 on a machine that stays offline after model download.
+- Run research tasks automatically on a schedule  
+- Send each task to the configured AnythingLLM workspace + model  
+- Save results in the **Encrypted Research Archive**  
+- Log every run  
+- **No** Cloud Scheduler, **no** custom backend, **no** auto Email/Telegram  
 
----
+### 11.2 Initial tasks (already in `tasks.json`)
 
-## Environment variables summary
+| Task ID | Schedule | Workspace slug |
+|---------|----------|----------------|
+| `daily-global-market-brief` | Daily **08:00** (`Asia/Riyadh` by default) | `global-markets` |
+| `us-market-close` | Weekdays **16:05** `America/New_York` | `us-equities` |
+
+Edit times, prompts, models anytime in:
+
+- `automation/config/tasks.json`  
+- `automation/prompts/`  
+
+### 11.3 Install automation on the 16″
 
 ```bash
-# Phase A — cloud prep only
-OPENAI_API_KEY=
-OPENAI_MODEL=gpt-4.1-mini
+cd ~/Projects/AI-LAB
 
-ANTHROPIC_API_KEY=
-ANTHROPIC_MODEL=claude-sonnet-4-5
+# 1) Secrets (if not done in Stage 2)
+./automation/scripts/keychain.sh set ailab.anythingllm api-key
+./automation/scripts/keychain.sh set ailab.research-archive passphrase
 
-PERPLEXITY_API_KEY=
-PERPLEXITY_MODEL=sonar-pro
+# 2) Edit LaunchAgent paths
+# Open automation/launchd/com.ailab.research.automation.plist
+# Replace EVERY /Users/SHARED/REPLACE_WITH_REPO with your real path
+# Example: /Users/you/Projects/AI-LAB
 
-# Phase B — local (no cloud keys required at runtime)
-LOCAL_MODEL_PATH=./models/gguf/my-domain-assistant.Q4_K_M.gguf
-LOCAL_EMBEDDING_MODEL=Xenova/all-MiniLM-L6-v2
-OLLAMA_HOST=http://127.0.0.1:11434
+# 3) Install LaunchAgent
+cp automation/launchd/com.ailab.research.automation.plist ~/Library/LaunchAgents/
+# (copy after editing, or edit the copy under ~/Library/LaunchAgents/)
+launchctl unload ~/Library/LaunchAgents/com.ailab.research.automation.plist 2>/dev/null || true
+launchctl load ~/Library/LaunchAgents/com.ailab.research.automation.plist
+
+# 4) Manual test (live)
+./automation/scripts/run-task.sh daily-global-market-brief --force
+./automation/scripts/run-task.sh us-market-close --force
+
+# 5) Dry-run acceptance (no live API)
+AILAB_DRY_RUN=1 ./automation/tests/e2e-test.sh
 ```
 
-Never bake API keys into training data or into the local Modelfile.
+What each run must do (Addendum A output rules):
+
+1. Execute automatically (or via CLI)  
+2. Use workspace + model from `tasks.json`  
+3. Save dated report into encrypted archive  
+4. Append execution log under `automation/logs/execution/`  
+5. Record errors if anything fails  
+
+### 11.4 How to add a future task (no rebuild)
+
+1. Create `automation/prompts/my-new-task.md`  
+2. Register it in `automation/prompts/library.json`  
+3. Append a new object under `tasks` in `automation/config/tasks.json`  
+4. Stop — Launchd already calls `run-due-tasks.sh` every minute  
+
+n8n Local is **optional only**. Primary path = Launchd + scripts.
+
+### 11.5 Where outputs go
+
+```text
+automation/archive/<task_id>/YYYY-MM-DD/<timestamp>-report.md.enc
+automation/logs/execution/YYYY-MM.jsonl
+```
 
 ---
 
-## Quality gates before you trust offline answers
+## 12) Stage 11 — Acceptance test (you must prove all of this)
 
-| Gate | Pass criteria |
-|------|----------------|
-| Reference gate | 100% of external refs in training set are Perplexity-verified |
-| Grounding gate | Spot-check: answers cite doc id / page when claiming facts |
-| Eval gate | Model scores acceptably on `eval.jsonl` |
-| Refusal gate | Unknown topics get “I don’t know” instead of invented facts |
-| Offline gate | App works with network disabled |
+### Local model path
 
----
-
-## Cost & risk notes
-
-- **OpenAI / Claude / Perplexity cost money** — use them in batch, cache results, avoid re-running verified rows.  
-- **Do not train on copyrighted text you are not allowed to use.** Prefer your own docs and properly licensed sources.  
-- **Fine-tuning does not magically memorize a whole library.** For large document sets, pair fine-tuning with local RAG.  
-- **Verification is mandatory.** Unchecked web snippets are a common way models learn false citations.
-
----
-
-## Minimal “happy path” if you want the shortest version
-
-1. Put your PDFs in `raw_docs/`.  
-2. Extract text → chunk.  
-3. **OpenAI:** generate grounded Q&A from chunks.  
-4. **Claude:** revise and drop hallucinations.  
-5. **Perplexity:** verify any external references; keep only clean rows.  
-6. Build `train.jsonl` / `eval.jsonl`.  
-7. QLoRA fine-tune a 7B–8B open model.  
-8. Export to GGUF → run with Ollama offline.  
-9. Ask questions; answers come from your local model (add local RAG for citations).  
-
----
-
-## How this relates to AI Lab in this repo
-
-| Need | Use |
-|------|-----|
-| Answer from my uploaded PDFs with citations today | AI Lab **RAG** (`AI_LAB_PROJECT.md`) |
-| Multi-step research + human approval | AI Lab **research agent** + **Approvals** |
-| Custom offline model trained on curated docs | This guide (`file.md`) Phase A + B |
-| Orchestrate OpenAI → Claude → Perplexity batch jobs | AI Lab **n8n** workflows or scripts |
-| Scheduled local research → encrypted archive | **Addendum A** (`automation/`) |
-
----
-
-## Project hardware (automation host)
-
-| Device | Spec | Role |
-|--------|------|------|
-| MacBook Pro 16″ | M5 Max · 18-core CPU · 40-core GPU · 128GB · 8TB · Silver | Primary Launchd + AnythingLLM + archive host |
-| MacBook Pro 14″ | M5 Pro · 18-core CPU · 48GB · 2TB · Silver | Secondary |
-| iPhone 18 Pro | 512GB · Silver | Mobile review only |
-| iPad Pro 13″ | M5 · 512GB · Wi-Fi + Cellular · Silver | Mobile review only |
-
-Full inventory: [`automation/PROJECT_HARDWARE.md`](./automation/PROJECT_HARDWARE.md)  
-Addendum A spec + deliverables: [`automation/ADDENDUM_A.md`](./automation/ADDENDUM_A.md)
-
----
-
-## Checklist
-
-- [ ] Documents collected and extracted  
-- [ ] OpenAI search / Q&A drafts generated  
-- [ ] Claude revision completed  
+- [ ] Docs extracted and chunked  
+- [ ] OpenAI drafts created  
+- [ ] Claude revision done  
 - [ ] Perplexity verified all external references  
 - [ ] `train.jsonl` + `eval.jsonl` + `references.json` ready  
-- [ ] Base model downloaded  
-- [ ] LoRA/QLoRA fine-tune finished  
-- [ ] Model exported and served locally (Ollama / llama.cpp)  
-- [ ] Offline test passed (no internet)  
-- [ ] Eval questions answered correctly from your model  
+- [ ] Fine-tuned model runs in Ollama / AnythingLLM  
+- [ ] Offline test: Wi‑Fi off, questions still answered from your model  
+- [ ] Unknown questions get “I don’t know” (not invented facts)  
+
+### Addendum A path (from ADDENDUM_A acceptance)
+
+- [ ] Automation runs on schedule (Launchd loaded)  
+- [ ] Reports land in Encrypted Research Archive  
+- [ ] No credentials exposed in files or logs  
+- [ ] Local-Only workspaces do not send data externally  
+- [ ] New task can be added via `tasks.json` + prompt only  
+- [ ] `AILAB_DRY_RUN=1 ./automation/tests/e2e-test.sh` passes  
 
 ---
 
-*Pipeline summary: Docs → OpenAI (search/draft) → Claude (revise) → Perplexity (verify refs) → clean dataset → local fine-tune → offline Q&A from your model.*
+## 13) Environment / keys summary
+
+```bash
+# Online prep only (Stages 4–6)
+OPENAI_API_KEY=
+ANTHROPIC_API_KEY=
+PERPLEXITY_API_KEY=
+
+# Local runtime (Stages 8–10) — prefer Keychain for AnythingLLM
+# Keychain: ailab.anythingllm / api-key
+# Keychain: ailab.research-archive / passphrase
+OLLAMA_HOST=http://127.0.0.1:11434
+# AnythingLLM base URL is in automation/config/tasks.json (localhost only for local_only workspaces)
+```
+
+---
+
+## 14) Related files in this repo
+
+| File | Role |
+|------|------|
+| **`file.md` (this file)** | Full “what to do” playbook |
+| `automation/ADDENDUM_A.md` | Formal Addendum A specification |
+| `automation/PROJECT_HARDWARE.md` | Device inventory |
+| `automation/README.md` | Short automation quick start |
+| `automation/config/tasks.json` | Editable task registry |
+| `automation/prompts/` | Central Prompt Library |
+| `automation/scripts/` | run-task / archive / keychain / scheduler |
+| `automation/launchd/` | macOS LaunchAgent |
+| `automation/tests/e2e-test.sh` | End-to-end acceptance |
+| `AI_LAB_PROJECT.md` | Existing AI Lab product features (RAG, n8n UI, etc.) |
+
+---
+
+## 15) One-page daily operating routine (after setup)
+
+**Morning (auto):** Launchd runs `daily-global-market-brief` → encrypted archive.  
+**After US close (auto):** Launchd runs `us-market-close` → encrypted archive.  
+**When you ask a question:** Use your local AnythingLLM / Ollama model (optionally with RAG).  
+**When you add research docs:** Re-run Stages 3–8 only for new material; do not rebuild automation.  
+**When you need a new scheduled brief:** Add prompt + `tasks.json` entry only.
+
+---
+
+*End of master playbook. Pipeline: Docs → OpenAI → Claude → Perplexity → local fine-tune → offline answers → Launchd automation → Encrypted Research Archive.*
