@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getOpenAI } from "@/lib/openai";
 import { getModelForTask } from "@/lib/model-router";
 import { guardRequest } from "@/lib/guard";
+import { readJsonBody } from "@/lib/json-body";
 import { extractPdfText } from "@/lib/pdf";
 import { buildAndLogUsage } from "@/lib/usage-server";
 
@@ -35,7 +36,9 @@ export async function POST(request: Request) {
       text = extracted.text;
       truncated = extracted.truncated;
     } else {
-      const body = await request.json();
+      const parsedBody = await readJsonBody(request);
+      if (!parsedBody.ok) return parsedBody.response;
+      const body = parsedBody.body;
       text = String(body.text ?? "").trim();
       mode = String(body.mode ?? "short");
       if (!text) {

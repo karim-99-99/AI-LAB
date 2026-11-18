@@ -51,6 +51,13 @@ export async function getRagDocument(
   return store.documents.find((d) => d.id === id) ?? null;
 }
 
+export async function findRagDocumentByContentHash(
+  contentHash: string
+): Promise<RagDocument | null> {
+  const store = await readRagStore();
+  return store.documents.find((d) => d.contentHash === contentHash) ?? null;
+}
+
 export async function saveRagDocument(doc: RagDocument): Promise<void> {
   const store = await readRagStore();
   store.documents = [doc, ...store.documents.filter((d) => d.id !== doc.id)];

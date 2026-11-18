@@ -1,3 +1,4 @@
+import { createHash } from "crypto";
 import { newId } from "@/lib/store";
 import { extractPdfTextForRag } from "@/lib/pdf";
 import {
@@ -6,7 +7,10 @@ import {
   chunkText,
 } from "@/lib/rag/chunk";
 import { embedTexts, getEmbeddingModel } from "@/lib/rag/embed";
-import { saveRagDocument } from "@/lib/rag/store";
+import {
+  findRagDocumentByContentHash,
+  saveRagDocument,
+} from "@/lib/rag/store";
 import type {
   ChunkMode,
   RagChunk,
@@ -63,7 +67,72 @@ export type IngestResult = {
     textPreview: string;
   }[];
   note: string;
+  /** True when this PDF and these chunk settings were already stored. */
+  duplicate?: boolean;
 };
+
+export function ragIngestFingerprint(options: {
+  buffer: Buffer;
+  mode: ChunkMode;
+  chunkSize: number;
+  overlap: number;
+  windowSize: number;
+  parentSize: number;
+  childSize: number;
+  mergeThreshold: number;
+}): string {
+  const hash = createHash("sha256");
+  hash.update(options.buffer);
+  hash.update(
+    `\0${options.mode}|${options.chunkSize}|${options.overlap}|${options.windowSize}|${options.parentSize}|${options.childSize}|${options.mergeThreshold}|${getEmbeddingModel()}`
+  );
+  return hash.digest("hex");
+}
+
+function ingestResultFromDocument(
+  doc: RagDocument,
+  note: string,
+  duplicate: boolean
+): IngestResult {
+  return {
+    duplicate,
+    document: {
+      id: doc.id,
+      filename: doc.filename,
+      createdAt: doc.createdAt,
+      charCount: doc.charCount,
+      chunkCount: doc.chunkCount,
+      embeddingModel: doc.embeddingModel,
+      truncated: doc.truncated,
+      textPreview: doc.textPreview,
+      chunkMode: doc.chunkMode,
+      windowSize: doc.windowSize,
+      mergeThreshold: doc.mergeThreshold,
+      parentChunkSize: doc.parentChunkSize,
+      childChunkSize: doc.childChunkSize,
+      parentCount: doc.parents?.length,
+      embeddingDims: doc.chunks[0]?.embedding.length ?? 0,
+    },
+    chunks: doc.chunks.map((c) => ({
+      id: c.id,
+      index: c.index,
+      text: c.text,
+      windowText: c.windowText,
+      parentId: c.parentId,
+      parentIndex: c.parentIndex,
+      charStart: c.charStart,
+      charEnd: c.charEnd,
+      embeddingDims: c.embedding.length,
+    })),
+    parents: doc.parents?.map((p) => ({
+      id: p.id,
+      index: p.index,
+      childCount: p.childIds.length,
+      textPreview: p.text.slice(0, 180),
+    })),
+    note,
+  };
+}
 
 export async function performRagIngest(
   options: IngestOptions
@@ -80,6 +149,25 @@ export async function performRagIngest(
     mergeThreshold,
     onProgress,
   } = options;
+
+  const contentHash = ragIngestFingerprint({
+    buffer,
+    mode,
+    chunkSize,
+    overlap,
+    windowSize,
+    parentSize,
+    childSize,
+    mergeThreshold,
+  });
+  const existing = await findRagDocumentByContentHash(contentHash);
+  if (existing) {
+    return ingestResultFromDocument(
+      existing,
+      "Duplicate PDF — returned the document already stored. No second copy was saved.",
+      true
+    );
+  }
 
   await onProgress?.("Extracting PDF text…");
   const extracted = await extractPdfTextForRag(buffer);
@@ -175,9 +263,19 @@ export async function performRagIngest(
 
   await onProgress?.("Saving document…");
 
+  const raced = await findRagDocumentByContentHash(contentHash);
+  if (raced) {
+    return ingestResultFromDocument(
+      raced,
+      "Duplicate PDF — returned the document already stored. No second copy was saved.",
+      true
+    );
+  }
+
   const doc: RagDocument = {
     id: docId,
     filename: filename || "document.pdf",
+    contentHash,
     createdAt: new Date().toISOString(),
     charCount: extracted.text.length,
     chunkCount: chunks.length,
@@ -206,43 +304,7 @@ export async function performRagIngest(
         ? "Sentence-window ingest — sentences embedded; windows stored for synthesis"
         : "Basic ingest — PDF → chunks → embeddings stored";
 
-  return {
-    document: {
-      id: doc.id,
-      filename: doc.filename,
-      createdAt: doc.createdAt,
-      charCount: doc.charCount,
-      chunkCount: doc.chunkCount,
-      embeddingModel: doc.embeddingModel,
-      truncated: doc.truncated,
-      textPreview: doc.textPreview,
-      chunkMode: doc.chunkMode,
-      windowSize: doc.windowSize,
-      mergeThreshold: doc.mergeThreshold,
-      parentChunkSize: doc.parentChunkSize,
-      childChunkSize: doc.childChunkSize,
-      parentCount: parents?.length,
-      embeddingDims: chunks[0]?.embedding.length ?? 0,
-    },
-    chunks: chunks.map((c) => ({
-      id: c.id,
-      index: c.index,
-      text: c.text,
-      windowText: c.windowText,
-      parentId: c.parentId,
-      parentIndex: c.parentIndex,
-      charStart: c.charStart,
-      charEnd: c.charEnd,
-      embeddingDims: c.embedding.length,
-    })),
-    parents: parents?.map((p) => ({
-      id: p.id,
-      index: p.index,
-      childCount: p.childIds.length,
-      textPreview: p.text.slice(0, 180),
-    })),
-    note,
-  };
+  return ingestResultFromDocument(doc, note, false);
 }
 
 export function parseIngestMode(modeRaw: string): ChunkMode {

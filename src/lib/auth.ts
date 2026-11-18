@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
  * - Cookie: practice_key=<PRACTICE_API_KEY>
  * - Authorization: Bearer <PRACTICE_API_KEY>
  *
- * If PRACTICE_API_KEY is unset, routes stay open (local-only practice).
+ * Fail closed: if PRACTICE_API_KEY is unset, protected routes are refused.
  */
 export function getExpectedPracticeKey(): string | null {
   const key = process.env.PRACTICE_API_KEY?.trim();
@@ -35,7 +35,15 @@ export function assertPracticeAuth(
   request: Request
 ): NextResponse | null {
   const expected = getExpectedPracticeKey();
-  if (!expected) return null;
+  if (!expected) {
+    return NextResponse.json(
+      {
+        error:
+          "PRACTICE_API_KEY is not configured. Protected routes are refused until it is set.",
+      },
+      { status: 401 }
+    );
+  }
 
   const provided = extractPracticeKey(request);
   if (provided === expected) return null;

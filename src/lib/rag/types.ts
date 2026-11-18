@@ -31,6 +31,8 @@ export type RagParent = {
 export type RagDocument = {
   id: string;
   filename: string;
+  /** SHA-256 of file bytes plus chunk settings. Same hash is the same document. */
+  contentHash?: string;
   createdAt: string;
   charCount: number;
   chunkCount: number;

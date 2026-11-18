@@ -68,13 +68,20 @@ export function ChatPanel() {
         for (const part of parts) {
           const line = part.trim();
           if (!line.startsWith("data:")) continue;
-          const payload = JSON.parse(line.slice(5).trim()) as {
+          let payload: {
             type: string;
             text?: string;
             error?: string;
             usage?: UsageInfo;
             conversationId?: string;
           };
+          try {
+            payload = JSON.parse(line.slice(5).trim()) as typeof payload;
+          } catch {
+            throw new Error(
+              "Chat stream event was not valid JSON. The practice key was already accepted; this is a response-format error."
+            );
+          }
 
           if (payload.type === "token" && payload.text) {
             assistantText += payload.text;

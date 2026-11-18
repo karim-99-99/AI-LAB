@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getOpenAI } from "@/lib/openai";
 import { getModelForTask } from "@/lib/model-router";
 import { guardRequest } from "@/lib/guard";
+import { readJsonBody } from "@/lib/json-body";
 import { buildAndLogUsage } from "@/lib/usage-server";
 import {
   cacheGet,
@@ -33,7 +34,9 @@ export async function POST(request: Request) {
   const requestId = newRequestId();
 
   try {
-    const body = await request.json();
+    const parsedBody = await readJsonBody(request);
+    if (!parsedBody.ok) return parsedBody.response;
+    const body = parsedBody.body;
     const gated = guardUserInput(String(body.question ?? ""), {
       field: "question",
     });
