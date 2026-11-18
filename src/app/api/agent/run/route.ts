@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { guardRequest } from "@/lib/guard";
+import { readJsonBody } from "@/lib/json-body";
 import { runResearchAgent } from "@/lib/agent/run-agent";
 import { runResearchAgentLangGraph } from "@/lib/agent/run-agent-langgraph";
 import { createThreadId, getThread, listRecentThreads } from "@/lib/agent/memory";
@@ -40,7 +41,9 @@ export async function POST(request: Request) {
   const requestId = newRequestId();
 
   try {
-    const body = await request.json();
+    const parsedBody = await readJsonBody(request);
+    if (!parsedBody.ok) return parsedBody.response;
+    const body = parsedBody.body;
     const gated = guardUserInput(String(body.goal ?? body.question ?? ""), {
       field: "goal",
     });

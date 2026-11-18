@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { guardRequest } from "@/lib/guard";
+import { readJsonBody } from "@/lib/json-body";
 import { logRun } from "@/lib/automation";
 import { isGmailConfigured, sendGmail } from "@/lib/mail";
 import { newId, readStore, updateStore } from "@/lib/store";
@@ -51,7 +52,9 @@ export async function POST(request: Request) {
   if (blocked) return blocked;
 
   try {
-    const body = await request.json();
+    const parsedBody = await readJsonBody(request);
+    if (!parsedBody.ok) return parsedBody.response;
+    const body = parsedBody.body;
     const id = String(body.id ?? "").trim();
     const actionRaw = String(body.action ?? "approve").trim();
     const action =

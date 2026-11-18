@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getOpenAI } from "@/lib/openai";
 import { getModelForTask } from "@/lib/model-router";
 import { guardRequest } from "@/lib/guard";
+import { readJsonBody } from "@/lib/json-body";
 import { extractionSchema } from "@/lib/schemas";
 import { newId, updateStore } from "@/lib/store";
 import { buildAndLogUsage } from "@/lib/usage-server";
@@ -11,7 +12,9 @@ export async function POST(request: Request) {
   if (blocked) return blocked;
 
   try {
-    const body = await request.json();
+    const parsedBody = await readJsonBody(request);
+    if (!parsedBody.ok) return parsedBody.response;
+    const body = parsedBody.body;
     const text = String(body.text ?? "").trim();
     const kind = body.kind === "form" ? "form" : "invoice";
 

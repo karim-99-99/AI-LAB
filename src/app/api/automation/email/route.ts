@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getOpenAI } from "@/lib/openai";
 import { getModelForTask } from "@/lib/model-router";
 import { guardRequest } from "@/lib/guard";
+import { readJsonBody } from "@/lib/json-body";
 import {
   getIdempotentResponse,
   logRun,
@@ -21,7 +22,9 @@ export async function POST(request: Request) {
   if (cached) return NextResponse.json(cached);
 
   try {
-    const body = await request.json();
+    const parsedBody = await readJsonBody(request);
+    if (!parsedBody.ok) return parsedBody.response;
+    const body = parsedBody.body;
     const to = String(body.to ?? "").trim();
     const purpose = String(body.purpose ?? body.subject ?? "").trim();
     const context = String(body.context ?? body.body ?? "").trim();

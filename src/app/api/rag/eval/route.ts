@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { guardRequest } from "@/lib/guard";
+import { readJsonBody } from "@/lib/json-body";
 import { DEFAULT_EVAL_SET } from "@/lib/rag/eval-set";
 import { runRagEval } from "@/lib/rag/run-eval";
 
@@ -20,7 +21,9 @@ export async function POST(request: Request) {
   if (blocked) return blocked;
 
   try {
-    const body = await request.json().catch(() => ({}));
+    const parsedBody = await readJsonBody(request);
+    if (!parsedBody.ok) return parsedBody.response;
+    const body = parsedBody.body;
     const documentId =
       typeof body.documentId === "string" && body.documentId
         ? body.documentId
